@@ -4,7 +4,6 @@ from input_algorithms.dictobj import dictobj
 from input_algorithms.meta import Meta
 
 from delfick_error import DelfickError
-import json
 
 EmptyMeta = Meta.empty()
 
