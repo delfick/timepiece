@@ -11,7 +11,7 @@ import parsimonious
 EmptyMeta = Meta({}, [])
 
 class TimeSpecGrammar(object):
-    Visotor = NotImplemented
+    Visitor = NotImplemented
 
     def __init__(self, available_sections=None):
         self.available_sections = available_sections
