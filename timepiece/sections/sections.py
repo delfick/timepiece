@@ -1,5 +1,5 @@
 from timepiece.sections.base import a_section, BaseSpec, ssv_spec, none_spec, section_repr, fieldSpecs_from
-from timepiece.sizing import valid_sizes, convert_amount, common_size
+from timepiece.sizing import valid_sizes, convert_amount, common_size, Sizes
 from timepiece.helpers import memoized_property
 
 from input_algorithms import spec_base as sb
@@ -47,27 +47,29 @@ class FilterSpec(BaseSpec):
     day_names = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
 
     def repeat_amount(self):
-        data = {"num": 1, "size": "minute"}
+        data = {"num": 1, "size": Sizes.MINUTE}
         if len(self.minutes) > 1:
             data["size"] = "minute"
         elif self.minutes:
-            data["size"] = "hour"
+            data["size"] = Sizes.HOUR
         elif len(self.hours) > 1:
-            data["size"] = "hour"
+            data["size"] = Sizes.HOUR
         elif self.hours:
-            data["size"] = "day"
+            data["size"] = Sizes.DAY
         elif len(self.days) > 1 or self.day_names:
-            data["size"] = "day"
+            data["size"] = Sizes.DAY
         elif self.days:
-            data["size"] = "week"
+            data["size"] = Sizes.WEEK
         elif len(self.weeks) > 1:
-            data["size"] = "week"
+            data["size"] = Sizes.WEEK
         elif self.weeks:
-            data["size"] = "year"
+            data["size"] = Sizes.YEAR
         elif len(self.months) > 1:
-            data["size"] = "month"
+            data["size"] = Sizes.MONTH
         elif self.months:
-            data["size"] = "year"
+            data["size"] = Sizes.YEAR
+
+        data["size"] = data["size"].value
         return AmountSpec.FieldSpec(data).normalise(EmptyMeta, data)
 
 class RepeatAndFiltersSpec(BaseSpec):
@@ -120,13 +122,16 @@ class AmountSpec(BaseSpec):
         size = self.size
         if at > start:
             difference = (at - start).seconds
-            if size == "second":
+            if size == Sizes.SECOND.value:
                 start += timedelta(seconds=int(difference/num) * num)
-            elif size == "minute":
+
+            elif size == Sizes.MINUTE.value:
                 start += timedelta(minutes=int(difference/60/num) * num)
-            elif size == "hour":
+
+            elif size == Sizes.HOUR.value:
                 start += timedelta(hours=int(difference/3600/num) * num)
-            elif size == "day":
+
+            elif size == Sizes.DAY.value:
                 start += timedelta(days=int(difference/3600*24/num) * num)
 
         while start < at:
