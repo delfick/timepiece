@@ -4,6 +4,7 @@ from input_algorithms.dictobj import dictobj
 from input_algorithms.meta import Meta
 
 from delfick_error import DelfickError
+import json
 
 EmptyMeta = Meta.empty()
 
@@ -92,20 +93,29 @@ class SectionSpec(sb.Spec):
             , sb.dictof(
                   sb.string_spec()
                 , sb.match_spec(
-                      (int, sb.integer_spec())
+                      (bool, sb.boolean())
+                    , (int, sb.integer_spec())
                     , (str, sb.string_spec())
-                    , (tuple, SectionSpec())
+                    , (tuple, self)
                     , (dictobj, sb.any_spec())
                     )
                 )
             ).normalise(meta, val)
 
         if val[0] not in self.available_sections:
-            raise BadSpecValue("Unknown section type", meta=meta, wanted=val[0])
+            raise BadSpecValue("Unknown section type", meta=meta, wanted=val[0], available=list(self.available_sections.keys()))
         return self.available_sections[val[0]].normalise(meta, val[1])
 
 def section_repr(self):
-    return "{0}({1})".format(self.__class__._section_name, {k:v for k, v in self.items() if not k.startswith("_")})
+    def convert(o):
+        if o.__class__.__repr__ is section_repr:
+            return repr(o)
+        else:
+            return o
+
+    kwargs = sorted((k, convert(v)) for k, v in self.items() if not k.startswith("_") and v is not sb.NotSpecified)
+    formatted = ['"{0}": {1}'.format(k, v) for k, v in kwargs]
+    return "{0}({1})".format(self.__class__._section_name, "{{{0}}}".format(', '.join(formatted)))
 
 def fieldSpecs_from(*specs):
     if len(specs) is 1:
