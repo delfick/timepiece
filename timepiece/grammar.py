@@ -30,31 +30,33 @@ class TimeSpecVisitor(NodeVisitor):
 
     @memoized_property
     def grammar(self):
-        return Grammar("""
-            time_spec = grouped_funcs?
+        return Grammar(self.grammar_string)
 
-            grouped_funcs = grouped_funcs_first grouped_with_joiner*
-            grouped_with_joiner = joiner grouped_funcs
-            grouped_funcs_first = wrapped_grouped_funcs / func
-            wrapped_grouped_funcs = start_bracket grouped_funcs end_bracket
+    grammar_string = """
+        time_spec = grouped_funcs?
 
-            func = func_name "(" func_sig ")"
-            func_sig = key_pairs?
+        grouped_funcs = grouped_funcs_first grouped_with_joiner*
+        grouped_with_joiner = joiner grouped_funcs
+        grouped_funcs_first = wrapped_grouped_funcs / func
+        wrapped_grouped_funcs = start_bracket grouped_funcs end_bracket
 
-            key_pairs = key_pair commad_key_pair*
-            commad_key_pair = "," key_pair
-            key_pair = key_name ":" func_or_value
+        func = func_name "(" func_sig ")"
+        func_sig = key_pairs?
 
-            func_or_value = arbitrary_string / number / func
+        key_pairs = key_pair commad_key_pair*
+        commad_key_pair = "," key_pair
+        key_pair = key_name ":" func_or_value
 
-            start_bracket = "("
-            end_bracket = ")"
-            joiner = "&" / "|"
-            key_name = ~r"[a-zA-Z][a-zA-Z0-9]+"
-            func_name = ~r"[a-zA-Z][a-zA-Z0-9_]+"
-            number = ~r"[0-9]+" &~r"[\),]"
-            arbitrary_string = ~r"[\s\.a-zA-Z0-9;_-]+" !"("
-        """)
+        func_or_value = arbitrary_string / number / func
+
+        start_bracket = "("
+        end_bracket = ")"
+        joiner = "&" / "|"
+        key_name = ~r"[a-zA-Z][a-zA-Z0-9]+"
+        func_name = ~r"[a-zA-Z][a-zA-Z0-9_]+"
+        number = ~r"[0-9]+" &~r"[\),]"
+        arbitrary_string = ~r"[\s\.a-zA-Z0-9;_-]+" !"("
+    """
 
     def __init__(self, available_sections=None):
         self.count = -1

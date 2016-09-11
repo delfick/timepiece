@@ -9,7 +9,7 @@ this_dir = os.path.abspath(os.path.dirname(__file__))
 ext_dir = os.path.join(this_dir, "ext")
 sys.path.extend([this_dir, ext_dir])
 
-extensions = ['sphinx.ext.autodoc', 'ext.specifications']
+extensions = ['sphinx.ext.autodoc', 'ext.grammar', 'ext.specifications']
 
 html_theme = 'the_theme'
 html_theme_path = [os.path.join(this_dir, 'templates'), sphinx_rtd_theme.get_html_theme_path()]
