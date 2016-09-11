@@ -3,7 +3,7 @@
 from tests.helpers import TestCase
 
 from timepiece.spec import make_timepiece
-from timepiece import sections
+from timepiece.sections import sections
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from input_algorithms.errors import BadSpecValue
@@ -36,7 +36,7 @@ describe TestCase, "Sections":
                 fake_datetime = mock.Mock(name="datetime")
                 fake_datetime.utcnow.return_value = now
 
-                with mock.patch("timepiece.sections.datetime", fake_datetime):
+                with mock.patch("timepiece.sections.sections.datetime", fake_datetime):
                     obj = self.parser.time_spec_to_object("now()")
 
                 self.assertIs(type(obj), sections.RepeatSpec)
@@ -99,7 +99,7 @@ describe TestCase, "Sections":
         describe "range":
             it "consolidate the min and max into a common size and then finds a random amount in that range into an AmountSpec":
                 randrange = mock.Mock(name="randrange", return_value=42)
-                with mock.patch("timepiece.sections.random.randrange", randrange):
+                with mock.patch("timepiece.sections.sections.random.randrange", randrange):
                     obj = self.parser.time_spec_to_object("range(min: amount(num:1, size: second), max: amount(num:2, size:hour))", validate=False)
                 self.assertEqual(type(obj), sections.AmountSpec)
                 self.assertEqual(obj.num, 42)
@@ -170,7 +170,7 @@ describe TestCase, "Sections":
                 fake_iso8601 = mock.Mock(name='iso8601')
                 fake_iso8601.parse_repeating_interval.return_value = res
 
-                with mock.patch("timepiece.sections.aniso8601", fake_iso8601):
+                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
                     self.assertIs(obj.interval, res)
 
                 fake_iso8601.parse_repeating_interval.assert_called_once_with(spec)
@@ -190,7 +190,7 @@ describe TestCase, "Sections":
                 fake_iso8601 = mock.Mock(name='iso8601')
                 fake_iso8601.parse_datetime.return_value = res
 
-                with mock.patch("timepiece.sections.aniso8601", fake_iso8601):
+                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
                     self.assertIs(obj.datetime, res)
 
                 fake_iso8601.parse_datetime.assert_called_once_with(spec)
@@ -208,7 +208,7 @@ describe TestCase, "Sections":
                 fake_iso8601 = mock.Mock(name='iso8601')
                 fake_iso8601.parse_date.return_value = res
 
-                with mock.patch("timepiece.sections.aniso8601", fake_iso8601):
+                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
                     self.assertIs(obj.day, res)
 
                 fake_iso8601.parse_date.assert_called_once_with(spec)
@@ -223,7 +223,7 @@ describe TestCase, "Sections":
                 fake_iso8601 = mock.Mock(name='iso8601')
                 fake_iso8601.parse_time.return_value = res
 
-                with mock.patch("timepiece.sections.aniso8601", fake_iso8601):
+                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
                     self.assertIs(obj.time, res)
 
                 fake_iso8601.parse_time.assert_called_once_with(spec)

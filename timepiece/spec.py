@@ -1,5 +1,5 @@
+from timepiece.sections.base import JoinerSpec, SectionSpec
 from timepiece.grammar import TimeSpecGrammar, TimeSpecVisitor
-from timepiece.sections import JoinerSpec, SectionSpec
 
 from delfick_error import DelfickError
 
