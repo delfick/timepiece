@@ -13,7 +13,7 @@ setup(
 
        , "dateparser==0.4.0"
        , "dateutils==0.6.6"
-       , "parsimonious==0.6.2"
+       , "parsimonious==0.7.0"
        , "aniso8601==1.1.0"
        ]
 
