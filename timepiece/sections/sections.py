@@ -37,7 +37,7 @@ class RepeatSpec(BaseSpec):
 @a_section("filter")
 class FilterSpec(BaseSpec):
     def __repr__(self):
-        return "[{1}]".format({k:v for k, v in self.items() if not k.startswith("_")})
+        return "[{1}]".format(section_repr(self))
     specifies = ("filter", )
     minutes = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     hours = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
@@ -49,7 +49,7 @@ class FilterSpec(BaseSpec):
     def repeat_amount(self):
         data = {"num": 1, "size": Sizes.MINUTE}
         if len(self.minutes) > 1:
-            data["size"] = "minute"
+            data["size"] = Sizes.MINUTE
         elif self.minutes:
             data["size"] = Sizes.HOUR
         elif len(self.hours) > 1:
@@ -70,7 +70,7 @@ class FilterSpec(BaseSpec):
             data["size"] = Sizes.YEAR
 
         data["size"] = data["size"].value
-        return AmountSpec.FieldSpec(data).normalise(EmptyMeta, data)
+        return AmountSpec.using(**data)
 
 class RepeatAndFiltersSpec(BaseSpec):
     def __repr__(self):
