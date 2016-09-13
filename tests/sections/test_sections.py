@@ -2,8 +2,8 @@
 
 from tests.helpers import TestCase
 
+from timepiece.sections import sections, final
 from timepiece.spec import make_timepiece
-from timepiece.sections import sections
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from input_algorithms.errors import BadSpecValue
@@ -26,7 +26,7 @@ describe TestCase, "Sections":
                 epoch = datetime.utcnow() + timedelta(hours=1)
                 obj = self.parser.time_spec_to_object("epoch(epoch: {0})".format(epoch.strftime("%s.%f")))
 
-                self.assertIs(type(obj), sections.RepeatSpec)
+                self.assertIs(type(obj), final.RepeatSpec)
                 self.assertEqual(type(obj.start), sections.DateTimeSpec)
                 self.assertEqual(obj.start.datetime, epoch)
 
@@ -39,7 +39,7 @@ describe TestCase, "Sections":
                 with mock.patch("timepiece.sections.sections.datetime", fake_datetime):
                     obj = self.parser.time_spec_to_object("now()")
 
-                self.assertIs(type(obj), sections.RepeatSpec)
+                self.assertIs(type(obj), final.RepeatSpec)
                 self.assertEqual(type(obj.start), sections.DateTimeSpec)
                 self.assertIs(obj.start.datetime, now)
 
@@ -113,13 +113,13 @@ describe TestCase, "Sections":
 
             it "combines with intervals":
                 obj = self.parser.time_spec_to_object("between(start: sunset()) & interval(every: amount(num: 1, size: minute))")
-                self.assertEqual(type(obj), sections.RepeatSpec)
+                self.assertEqual(type(obj), final.RepeatSpec)
                 self.assertEqual(type(obj.every), sections.IntervalsSpec)
                 self.assertEqual(len(obj.every.intervals), 1)
 
             it "combines with multiple intervals":
                 obj = self.parser.time_spec_to_object("between(start: sunset()) & (interval(every: amount(num: 1, size: minute)) | interval(every: amount(num:2, size: hour)))")
-                self.assertEqual(type(obj), sections.RepeatSpec)
+                self.assertEqual(type(obj), final.RepeatSpec)
                 self.assertEqual(type(obj.every), sections.IntervalsSpec)
                 self.assertEqual(len(obj.every.intervals), 2)
 
