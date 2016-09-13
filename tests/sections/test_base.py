@@ -126,16 +126,14 @@ describe TestCase, "JoinerSpec":
     it "uses or_with if the joiner is OR":
         first = mock.Mock(name="first")
         first_normalised = mock.Mock(name="first_normalised")
-        first_simplified = mock.Mock(name="first_simplified")
-        first_normalised.simplify.return_value = first_simplified
+        first_normalised.return_value = first
 
         second = mock.Mock(name="second")
         second_normalised = mock.Mock(name="second_normalised")
-        second_simplified = mock.Mock(name="second_simplified")
-        second_normalised.simplify.return_value = second_simplified
+        second_normalised.return_value = second
 
         orded = mock.Mock(name="orded")
-        first_simplified.or_with.return_value = orded
+        first_normalised.or_with.return_value = orded
 
         fakeSectionSpec = mock.Mock(name="SectionSpec")
         normalise = lambda s, v: {first: first_normalised, second: second_normalised}[v]
@@ -146,21 +144,17 @@ describe TestCase, "JoinerSpec":
         with mock.patch("timepiece.sections.base.SectionSpec", lambda: fakeSectionSpec):
             self.assertIs(JoinerSpec().normalise(Meta.empty(), val), orded)
 
-        first_simplified.or_with.assert_called_once_with(second_simplified)
+        first_normalised.or_with.assert_called_once_with(second_normalised)
 
     it "uses combine_with if the joiner is OR":
         first = mock.Mock(name="first")
         first_normalised = mock.Mock(name="first_normalised")
-        first_simplified = mock.Mock(name="first_simplified")
-        first_normalised.simplify.return_value = first_simplified
 
         second = mock.Mock(name="second")
         second_normalised = mock.Mock(name="second_normalised")
-        second_simplified = mock.Mock(name="second_simplified")
-        second_normalised.simplify.return_value = second_simplified
 
         orded = mock.Mock(name="orded")
-        first_simplified.combine_with.return_value = orded
+        first_normalised.combine_with.return_value = orded
 
         fakeSectionSpec = mock.Mock(name="SectionSpec")
         normalise = lambda s, v: {first: first_normalised, second: second_normalised}[v]
@@ -171,7 +165,7 @@ describe TestCase, "JoinerSpec":
         with mock.patch("timepiece.sections.base.SectionSpec", lambda: fakeSectionSpec):
             self.assertIs(JoinerSpec().normalise(Meta.empty(), val), orded)
 
-        first_simplified.combine_with.assert_called_once_with(second_simplified)
+        first_normalised.combine_with.assert_called_once_with(second_normalised)
 
     it "complains if the joiner is not OR or AND":
         first = mock.NonCallableMock(name="first", spec=[])
@@ -194,15 +188,13 @@ describe TestCase, "JoinerSpec":
 
         first = mock.Mock(name="first")
         first_normalised = mock.Mock(name="first_normalised")
-        first_simplified = mock.Mock(name="first_simplified")
-        first_normalised.simplify.return_value = first_simplified
+        first_normalised.return_value = first
 
         second = mock.Mock(name="second")
         second_normalised = mock.Mock(name="second_normalised")
-        second_simplified = mock.Mock(name="second_simplified")
-        second_normalised.simplify.return_value = second_simplified
+        second_normalised.return_value = second
 
-        first_simplified.combine_with.side_effect = EKls("lol")
+        first_normalised.combine_with.side_effect = EKls("lol")
 
         fakeSectionSpec = mock.Mock(name="SectionSpec")
         normalise = lambda s, v: {first: first_normalised, second: second_normalised}[v]

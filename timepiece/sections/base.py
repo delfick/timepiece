@@ -65,9 +65,9 @@ class JoinerSpec(sb.Spec):
         typ, first, second = val
         try:
             if typ == "OR":
-                return first.simplify().or_with(second.simplify())
+                return first.or_with(second)
             else:
-                return first.simplify().combine_with(second.simplify())
+                return first.combine_with(second)
         except self.ErrorKls as error:
             raise BadSpecValue("Failed to join", error=error)
 
@@ -103,7 +103,17 @@ class SectionSpec(sb.Spec):
 
         if val[0] not in self.available_sections:
             raise BadSpecValue("Unknown section type", meta=meta, wanted=val[0], available=list(self.available_sections.keys()))
-        return self.available_sections[val[0]].normalise(meta, val[1])
+
+        made = self.available_sections[val[0]].normalise(meta, val[1])
+        simplified = None
+        while made is not simplified:
+            if simplified is not None:
+                made = simplified
+            if hasattr(made, "simplify"):
+                simplified = made.simplify()
+            else:
+                break
+        return simplified
 
 def section_repr(self):
     def convert(o):
