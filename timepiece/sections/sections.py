@@ -28,7 +28,7 @@ class RepeatSpec(BaseSpec):
         return spec
     every = dictobj.Field(lambda: fieldSpecs_from(IntervalsSpec), default=None)
     start = dictobj.Field(lambda: fieldSpecs_from(EpochSpec, DateTimeSpec, SunRiseSpec, SunSetSpec), wrapper=sb.required)
-    end = dictobj.Field(lambda: sb.or_spec(none_spec(), fieldSpecs_from(EpochSpec, DateTimeSpec, SunRiseSpec, SunSetSpec)), default=None)
+    end = dictobj.Field(lambda: sb.or_spec(none_spec(), fieldSpecs_from(Forever, EpochSpec, DateTimeSpec, SunRiseSpec, SunSetSpec)), default=None)
 
     def following(self, at=None):
         if at is None:
@@ -43,7 +43,40 @@ class RepeatSpec(BaseSpec):
         if self.every:
             return self.every.following(at, self.start.datetime, self.end)
 
-@a_section("filter")
+    def duration(self):
+        return self.start.datetime(), self.end.datetime() if self.end is not None else self.end
+
+    def combine_with(self, other):
+        if type(other) is FilterSpec:
+            return RepeatAndFiltersSpec.using(repeat=self, filters=[other])
+        elif type(other) is IntervalSpec:
+            return RepeatSpec.using(start=self.start, end=self.end, every=IntervalsSpec.contain(other))
+        elif type(other) is IntervalsSpec:
+            return RepeatSpec.using(start=self.start, end=self.end, every=other)
+        else:
+            super(RepeatSpec, self).or_with(other)
+
+    def or_with(self, other):
+        one = RepeatAndFiltersSpec.using(repeat=self)
+        if type(other) is RepeatSpec:
+            two = RepeatAndFiltersSpec.using(repeat=other)
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        elif type(other) is FilterSpec:
+            two = RepeatAndFiltersSpec.using(repeat=self, filters=[other])
+            return ManyRepeatAndFiltersSpec.using(specs=[one, other])
+        elif type(other) is IntervalSpec:
+            two = RepeatAndFiltersSpec.using(
+                  repeat = RepeatSpec.using(start=self.start, end=self.end, every=IntervalsSpec.contain(other))
+                )
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        elif type(other) is IntervalsSpec:
+            two = RepeatAndFiltersSpec.using(
+                  repeat = RepeatSpec.using(start=self.start, end=self.end, every=other)
+                )
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        else:
+            super(RepeatSpec, self).or_with(other)
+
 class FilterSpec(BaseSpec):
     def __repr__(self):
         return "[{1}]".format(section_repr(self))
@@ -55,31 +88,22 @@ class FilterSpec(BaseSpec):
     months = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     day_names = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
 
-    def repeat_amount(self):
-        data = {"num": 1, "size": Sizes.MINUTE}
-        if len(self.minutes) > 1:
-            data["size"] = Sizes.MINUTE
-        elif self.minutes:
-            data["size"] = Sizes.HOUR
-        elif len(self.hours) > 1:
-            data["size"] = Sizes.HOUR
-        elif self.hours:
-            data["size"] = Sizes.DAY
-        elif len(self.days) > 1 or self.day_names:
-            data["size"] = Sizes.DAY
-        elif self.days:
-            data["size"] = Sizes.WEEK
-        elif len(self.weeks) > 1:
-            data["size"] = Sizes.WEEK
-        elif self.weeks:
-            data["size"] = Sizes.YEAR
-        elif len(self.months) > 1:
-            data["size"] = Sizes.MONTH
-        elif self.months:
-            data["size"] = Sizes.YEAR
+    def combine_with(self, other):
+        if type(other) is RepeatSpec:
+            return RepeatAndFiltersSpec.using(repeat=other, filters=[self]).simplify()
+        elif type(other) is FilterSpec:
+            kwargs = {}
+            for field in self.fields:
+                kwargs[field] = getattr(self, field) + getattr(other, field)
+            return FilterSpec.using(**kwargs)
+        elif type(other) is ManyRepeatAndFiltersSpec:
+            new_specs = [RepeatAndFiltersSpec.uing(repeat=s.repeat, filters=s.filters + [self]) for s in other.specs]
+            return ManyRepeatAndFiltersSpec(specs=new_specs)
+        else:
+            super(FilterSpec, self).combine_with(self, other)
 
-        data["size"] = data["size"].value
-        return AmountSpec.using(**data)
+    def is_filtered(self, at):
+        raise NotImplementedError("Getting there...")
 
 class RepeatAndFiltersSpec(BaseSpec):
     def __repr__(self):
@@ -88,8 +112,14 @@ class RepeatAndFiltersSpec(BaseSpec):
     repeat = dictobj.Field(lambda: fieldSpecs_from(RepeatSpec), wrapper=sb.required)
     filters = dictobj.Field(sb.listof(fieldSpecs_from(FilterSpec)))
 
-    def add_filter(self, new):
-        self.filters.append(new)
+    def following(self, at):
+        return self.repeat.following(at)
+
+    def is_filtered(self, at):
+        return all(f.is_filtered(at) for f in self.filters)
+
+    def simplify(self):
+        return ManyRepeatAndFiltersSpec.using(specs=[self])
 
 class ManyRepeatAndFiltersSpec(BaseSpec):
     def __repr__(self):
@@ -97,13 +127,13 @@ class ManyRepeatAndFiltersSpec(BaseSpec):
     specifies = ("repeat", "filter")
     specs = dictobj.Field(sb.listof(fieldSpecs_from(RepeatAndFiltersSpec)))
 
-    def add_spec(self, spec):
-        self.specs.append(spec)
-
     def following(self, at=None):
         if at is None:
             at = datetime.utcnow()
         return min([rf.following(at) for rf in self.specs])
+
+    def is_filtered(self, at):
+        return any(rf.is_filtered(at) for rf in self.specs)
 
 class Forever(BaseSpec):
     __repr__ = section_repr
