@@ -8,6 +8,7 @@ from input_algorithms.meta import Meta
 
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
+import datetime as datetime_module
 import aniso8601
 import random
 
@@ -141,11 +142,19 @@ class DayNameSpec(BaseSpec):
     specifies = ("day", )
     name = dictobj.Field(ssv_spec(["mon", "tues", "wed", "thur", "fri", "sat", "sun"]), wrapper=sb.required)
 
+    def simplify(self):
+        from timepiece.sections.final import FilterSpec
+        return FilterSpec.using(day_names=self.name)
+
 @a_section("day_number")
 class DayNumberSpec(BaseSpec):
     __repr__ = section_repr
     specifies = ("day", )
     number = dictobj.Field(sb.integer_spec(), wrapper=sb.required)
+
+    def simplify(self):
+        from timepiece.sections.final import FilterSpec
+        return FilterSpec.using(day_numbers=[str(self.number)])
 
 @a_section("time")
 class TimeSpec(BaseSpec):

@@ -40,9 +40,16 @@ class ssv_spec(sb.Spec):
 
     def normalise_filled(self, meta, val):
         if self.choices is None:
-            res = [v.strip() for v in val.split(";")]
+            if type(val) is list:
+                res = [v.strip() for v in val]
+            else:
+                res = [v.strip() for v in val.split(";")]
         else:
-            res = sb.listof(sb.string_choice_spec(self.choices)).normalise(meta, [v.strip() for v in val.split(";")])
+            if type(val) is not list:
+                val = [v.strip() for v in val.split(";")]
+            else:
+                val = [v.strip() for v in val]
+            res = sb.listof(sb.string_choice_spec(self.choices)).normalise(meta, val)
 
         if self.spec is None:
             return res

@@ -125,19 +125,19 @@ describe TestCase, "Sections":
 
         describe "day_name":
             it "does not provide enough on it's own":
-                with self.fuzzyAssertRaisesError(self.ErrorKls, "Time spec is invalid, .+", got=("day", )):
+                with self.fuzzyAssertRaisesError(self.ErrorKls, "Time spec is invalid, .+", got=("filter", )):
                     self.parser.time_spec_to_object("day_name(name: mon;tues)")
 
             it "provides a list of names":
                 obj = self.parser.time_spec_to_object("day_name(name: mon;tues)", validate=False)
-                self.assertEqual(obj.name, ["mon", "tues"])
+                self.assertEqual(obj.day_names, ["mon", "tues"])
 
                 obj = self.parser.time_spec_to_object("day_name(name: wed)", validate=False)
-                self.assertEqual(obj.name, ["wed"])
+                self.assertEqual(obj.day_names, ["wed"])
 
         describe "day_number":
             it "does not provide enough on it's own":
-                with self.fuzzyAssertRaisesError(self.ErrorKls, "Time spec is invalid, .+", got=("day", )):
+                with self.fuzzyAssertRaisesError(self.ErrorKls, "Time spec is invalid, .+", got=("filter", )):
                     self.parser.time_spec_to_object("day_number(number: 20)")
 
         describe "time":

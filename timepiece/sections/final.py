@@ -82,7 +82,8 @@ class FilterSpec(BaseSpec):
     days = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     weeks = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     months = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
-    day_names = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
+    day_names = dictobj.Field(lambda: ssv_spec(["mon", "tues", "wed", "thur", "fri", "sat", "sun"]))
+    day_numbers = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
 
     def combine_with(self, other):
         if type(other) is RepeatSpec:
