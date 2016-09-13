@@ -16,7 +16,16 @@ EmptyMeta = Meta.empty()
 @a_section("repeat")
 class RepeatSpec(BaseSpec):
     __repr__ = section_repr
-    specifies = ("repeat", )
+    @memoized_property
+    def specifies(self):
+        spec = ()
+        if self.every is not None:
+            spec += ("repeat", )
+        if self.end is not None:
+            spec += ("duration", )
+        if not spec:
+            spec = ("once", )
+        return spec
     every = dictobj.Field(lambda: fieldSpecs_from(IntervalsSpec), default=None)
     start = dictobj.Field(lambda: fieldSpecs_from(EpochSpec, DateTimeSpec, SunRiseSpec, SunSetSpec), wrapper=sb.required)
     end = dictobj.Field(lambda: sb.or_spec(none_spec(), fieldSpecs_from(EpochSpec, DateTimeSpec, SunRiseSpec, SunSetSpec)), default=None)
@@ -95,6 +104,9 @@ class ManyRepeatAndFiltersSpec(BaseSpec):
         if at is None:
             at = datetime.utcnow()
         return min([rf.following(at) for rf in self.specs])
+
+class Forever(BaseSpec):
+    __repr__ = section_repr
 
 @a_section("now")
 class NowSpec(BaseSpec):
@@ -207,23 +219,11 @@ class RangeSpec(BaseSpec):
 @a_section("between")
 class BetweenSpec(BaseSpec):
     __repr__ = section_repr
-    @memoized_property
-    def specifies(self):
-        return ("duration", )
     start = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), wrapper=sb.required)
     end = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), default=None)
 
-    def duration(self):
-        return self.start.datetime(), self.end.datetime() if self.end is not None else self.end
-
-    def combine_with(self, other):
-        if isinstance(other, IntervalSpec):
-            other = IntervalsSpec.contain(other)
-
-        if isinstance(other, IntervalsSpec):
-            return RepeatSpec.using(start=self.start, end=self.end, every=other)
-
-        return super(BetweenSpec, self).combine_with(other)
+    def simplify(self):
+        return RepeatSpec.using(start=self.start, end=self.end if self.end is not None else Forever.using())
 
 @a_section("day_name")
 class DayNameSpec(BaseSpec):

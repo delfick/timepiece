@@ -79,7 +79,7 @@ class TimeSpecVisitor(NodeVisitor):
             if validate:
                 if not hasattr(res, "specifies"):
                     raise self.ErrorKls("Sorry, object can only be used as a parameter", got=res)
-                if "repeat" not in res.specifies:
+                if "repeat" not in res.specifies and "once" not in res.specifies:
                     raise self.ErrorKls("Time spec is invalid, it must be able to specify a start with an optional interval", got=res.specifies)
             return res
 
