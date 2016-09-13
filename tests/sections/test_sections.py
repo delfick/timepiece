@@ -22,16 +22,15 @@ describe TestCase, "Sections":
             self.parser = make_timepiece(ErrorKls)
 
         describe "epoch":
-            it "simplifies into a RepeatSpec":
+            it "simplifies into a DateTimeSpec":
                 epoch = datetime.utcnow() + timedelta(hours=1)
                 obj = self.parser.time_spec_to_object("epoch(epoch: {0})".format(epoch.strftime("%s.%f")))
 
-                self.assertIs(type(obj), final.RepeatSpec)
-                self.assertEqual(type(obj.start), sections.DateTimeSpec)
-                self.assertEqual(obj.start.datetime, epoch)
+                self.assertIs(type(obj), final.DateTimeSpec)
+                self.assertEqual(obj.datetime, epoch)
 
         describe "now":
-            it "simplifies into a RepeatSpec":
+            it "simplifies into a DateTimeSpec":
                 now = datetime.utcnow() + timedelta(hours=1)
                 fake_datetime = mock.Mock(name="datetime")
                 fake_datetime.utcnow.return_value = now
@@ -39,9 +38,8 @@ describe TestCase, "Sections":
                 with mock.patch("timepiece.sections.sections.datetime", fake_datetime):
                     obj = self.parser.time_spec_to_object("now()")
 
-                self.assertIs(type(obj), final.RepeatSpec)
-                self.assertEqual(type(obj.start), sections.DateTimeSpec)
-                self.assertIs(obj.start.datetime, now)
+                self.assertIs(type(obj), final.DateTimeSpec)
+                self.assertIs(obj.datetime, now)
 
         describe "amount":
             it "can only be used as a parameter":
@@ -145,19 +143,18 @@ describe TestCase, "Sections":
                 with self.fuzzyAssertRaisesError(self.ErrorKls, "Time spec is invalid, .+", got=("time", )):
                     self.parser.time_spec_to_object("time(hour: 16, minute:20)")
 
+            it "can combine with a date":
+                res = self.parser.time_spec_to_object("time(hour: 16, minute:20) & date(month:3, day:10, year:1980)")
+
         describe "sunrise":
-            it "simplifies into a TimeSpec for 3am TODO: Make this like actually do something real":
+            it "does not simplify":
                 obj = self.parser.time_spec_to_object("sunrise()", validate=False)
-                self.assertIs(type(obj), sections.TimeSpec)
-                self.assertEqual(obj.hour, 3)
-                self.assertEqual(obj.minute, 0)
+                self.assertIs(type(obj), sections.SunRiseSpec)
 
         describe "sunset":
-            it "simplifies into a TimeSpec for 6pm TODO: Make this like actually do something real":
+            it "does not simplify":
                 obj = self.parser.time_spec_to_object("sunset()", validate=False)
-                self.assertIs(type(obj), sections.TimeSpec)
-                self.assertEqual(obj.hour, 18)
-                self.assertEqual(obj.minute, 0)
+                self.assertIs(type(obj), sections.SunSetSpec)
 
         describe "iso8601":
             it "can represent repeating intervals":

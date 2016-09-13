@@ -1,6 +1,7 @@
 from timepiece.sections.base import a_section, BaseSpec, ssv_spec, section_repr, fieldSpecs_from
 from timepiece.sizing import valid_sizes, convert_amount, common_size, Sizes
 from timepiece.helpers import memoized_property
+from timepiece.sections import final
 
 from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
@@ -23,8 +24,7 @@ class NowSpec(BaseSpec):
     specifies = ("day", "time")
 
     def simplify(self):
-        from timepiece.sections.final import RepeatSpec
-        return RepeatSpec.using(start=DateTimeSpec.contain(datetime.utcnow()).simplify())
+        return final.DateTimeSpec.contain(datetime.utcnow())
 
 @a_section("amount")
 class AmountSpec(BaseSpec):
@@ -129,12 +129,11 @@ class RangeSpec(BaseSpec):
 @a_section("between")
 class BetweenSpec(BaseSpec):
     __repr__ = section_repr
-    start = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), wrapper=sb.required)
-    end = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), default=None)
+    start = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, final.DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), wrapper=sb.required)
+    end = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, final.DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), default=None)
 
     def simplify(self):
-        from timepiece.sections.final import RepeatSpec
-        return RepeatSpec.using(start=self.start, end=self.end if self.end is not None else Forever.using())
+        return final.RepeatSpec.using(start=self.start, end=self.end if self.end is not None else Forever.using())
 
 @a_section("day_name")
 class DayNameSpec(BaseSpec):
@@ -143,8 +142,7 @@ class DayNameSpec(BaseSpec):
     name = dictobj.Field(ssv_spec(["mon", "tues", "wed", "thur", "fri", "sat", "sun"]), wrapper=sb.required)
 
     def simplify(self):
-        from timepiece.sections.final import FilterSpec
-        return FilterSpec.using(day_names=self.name)
+        return final.FilterSpec.using(day_names=self.name)
 
 @a_section("day_number")
 class DayNumberSpec(BaseSpec):
@@ -163,6 +161,23 @@ class TimeSpec(BaseSpec):
     hour = dictobj.Field(sb.integer_spec, wrapper=sb.required)
     minute = dictobj.Field(sb.integer_spec, wrapper=sb.required)
 
+    @memoized_property
+    def time(self):
+        ZERO = timedelta(0)
+        class UTC(datetime_module.tzinfo):
+            def utcoffset(self, dt): return ZERO
+            def tzname(self, dt): return "UTC"
+            def dst(self, dt): return ZERO
+        return datetime_module.time(self.hour, self.minute, tzinfo=UTC())
+
+    def combine_with(self, other):
+        date = getattr(other, "date", None)
+        if date is not None and getattr(other, "time", None) is None:
+            dt = datetime.combine(date, self.time)
+            return final.DateTimeSpec.contain(dt)
+        else:
+            super(TimeSpec, self).or_with(other)
+
 @a_section("epoch")
 class EpochSpec(BaseSpec):
     __repr__ = section_repr
@@ -170,49 +185,45 @@ class EpochSpec(BaseSpec):
     epoch = dictobj.Field(sb.float_spec, wrapper=sb.required)
 
     def simplify(self):
-        from timepiece.sections.final import RepeatSpec
-        return RepeatSpec.using(start=DateTimeSpec.contain(self.datetime))
+        return final.DateTimeSpec.contain(self.datetime)
 
     @classmethod
     def contain(kls, epoch):
-        return DateTimeSpec.contain(epoch)
+        return final.DateTimeSpec.contain(epoch)
 
     @memoized_property
     def datetime(self):
         return datetime.fromtimestamp(self.epoch)
 
-class DateTimeSpec(BaseSpec):
+@a_section("date")
+class Date(BaseSpec):
     __repr__ = section_repr
-    _section_name = "Datetime"
-    specifies = ("day", "time")
-    datetime = dictobj.Field(sb.any_spec, wrapper=sb.required)
+    specifies = ("day", )
+    day = dictobj.Field(sb.integer_spec, wrapper=sb.required)
+    month = dictobj.Field(sb.integer_spec, wrapper=sb.required)
+    year = dictobj.Field(sb.integer_spec, wrapper=sb.required)
 
-    @classmethod
-    def contain(kls, dt):
-        if isinstance(dt, float):
-            dt = datetime.fromtimestamp(dt)
-        return kls.FieldSpec().normalise(EmptyMeta, {"datetime": dt})
+    @memoized_property
+    def date(self):
+        return datetime_module.date(self.year, self.month, self.day)
 
-    def following(self, at=None):
-        if at is None:
-            at = datetime.utcnow()
-        return None if at > self.datetime else self.datetime
+    def combine_with(self, other):
+        time = getattr(other, "time", None)
+        if time is not None and getattr(other, "date", None) is None:
+            dt = datetime_module.combine(self.date, time)
+            return final.DateTimeSpec.contain(dt)
+        else:
+            super(TimeSpec, self).or_with(other)
 
 @a_section("sunrise")
 class SunRiseSpec(BaseSpec):
     __repr__ = section_repr
     specifies = ("day", "time")
 
-    def simplify(self):
-        return TimeSpec.using(hour=3, minute=0)
-
 @a_section("sunset")
 class SunSetSpec(BaseSpec):
     __repr__ = section_repr
     specifies = "time"
-
-    def simplify(self):
-        return TimeSpec.using(hour=18, minute=0)
 
 @a_section("iso8601")
 class ISO8601Spec(BaseSpec):

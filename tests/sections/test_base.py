@@ -295,7 +295,7 @@ describe TestCase, "fieldSpecs_from":
         spec = mock.Mock(name="spec")
         fieldspec = mock.Mock(name="FieldSpec")
         spec.FieldSpec.return_value = fieldspec
-        self.assertIs(fieldSpecs_from(spec), fieldspec)
+        self.assertIs(fieldSpecs_from(spec).spec, fieldspec)
 
     it "returns an or_spec if many spec":
         spec1 = mock.Mock(name="spec1")
@@ -306,6 +306,6 @@ describe TestCase, "fieldSpecs_from":
         fieldspec2 = mock.Mock(name="FieldSpec2")
         spec2.FieldSpec.return_value = fieldspec2
 
-        spec = fieldSpecs_from(spec1, spec2)
+        spec = fieldSpecs_from(spec1, spec2).spec
         self.assertEqual(type(spec), sb.or_spec)
 

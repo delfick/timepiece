@@ -1,6 +1,5 @@
 from timepiece.sections.base import BaseSpec, ssv_spec, none_spec, section_repr, fieldSpecs_from
 from timepiece.helpers import memoized_property
-from timepiece.sections import sections
 
 from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
@@ -9,6 +8,18 @@ from input_algorithms.meta import Meta
 from datetime import datetime
 
 EmptyMeta = Meta.empty()
+
+def repeat_every_spec():
+    from timepiece.sections import sections
+    return lambda: fieldSpecs_from(sections.IntervalsSpec)
+
+def repeat_start_spec():
+    from timepiece.sections import sections
+    return lambda: fieldSpecs_from(sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec)
+
+def repeat_end_spec():
+    from timepiece.sections import sections
+    return lambda: sb.or_spec(none_spec(), fieldSpecs_from(sections.Forever, sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec))
 
 class RepeatSpec(BaseSpec):
     __repr__ = section_repr
@@ -22,9 +33,9 @@ class RepeatSpec(BaseSpec):
         if not spec:
             spec = ("once", )
         return spec
-    every = dictobj.Field(lambda: fieldSpecs_from(sections.IntervalsSpec), default=None)
-    start = dictobj.Field(lambda: fieldSpecs_from(sections.EpochSpec, sections.DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec), wrapper=sb.required)
-    end = dictobj.Field(lambda: sb.or_spec(none_spec(), fieldSpecs_from(sections.Forever, sections.EpochSpec, sections.DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec)), default=None)
+    every = dictobj.Field(repeat_every_spec(), default=None)
+    start = dictobj.Field(repeat_start_spec(), wrapper=sb.required)
+    end = dictobj.Field(repeat_end_spec(), default=None)
 
     def following(self, at=None):
         if at is None:
@@ -43,6 +54,7 @@ class RepeatSpec(BaseSpec):
         return self.start.datetime(), self.end.datetime() if self.end is not None else self.end
 
     def combine_with(self, other):
+        from timepiece.sections import sections
         if type(other) is FilterSpec:
             return RepeatAndFiltersSpec.using(repeat=self, filters=[other])
         elif type(other) is sections.IntervalSpec:
@@ -53,6 +65,7 @@ class RepeatSpec(BaseSpec):
             super(RepeatSpec, self).or_with(other)
 
     def or_with(self, other):
+        from timepiece.sections import sections
         one = RepeatAndFiltersSpec.using(repeat=self)
         if type(other) is RepeatSpec:
             two = RepeatAndFiltersSpec.using(repeat=other)
@@ -86,7 +99,9 @@ class FilterSpec(BaseSpec):
     day_numbers = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
 
     def combine_with(self, other):
-        if type(other) is RepeatSpec:
+        if type(other) is DateTimeSpec:
+            return RepeatAndFiltersSpec.using(repeat=RepeatSpec.using(start=other, filters=[self]))
+        elif type(other) is RepeatSpec:
             return RepeatAndFiltersSpec.using(repeat=other, filters=[self]).simplify()
         elif type(other) is FilterSpec:
             kwargs = {}
@@ -131,4 +146,64 @@ class ManyRepeatAndFiltersSpec(BaseSpec):
 
     def is_filtered(self, at):
         return any(rf.is_filtered(at) for rf in self.specs)
+
+class DateTimeSpec(BaseSpec):
+    __repr__ = section_repr
+    _section_name = "Datetime"
+    specifies = ("once", )
+    datetime = dictobj.Field(sb.any_spec, wrapper=sb.required)
+
+    @memoized_property
+    def date(self):
+        return self.datetime.date()
+
+    @memoized_property
+    def time(self):
+        return self.datetime.time()
+
+    @classmethod
+    def contain(kls, dt):
+        if isinstance(dt, float):
+            dt = datetime.fromtimestamp(dt)
+        return kls.FieldSpec().normalise(EmptyMeta, {"datetime": dt})
+
+    def following(self, at=None):
+        if at is None:
+            at = datetime.utcnow()
+        return None if at > self.datetime else self.datetime
+
+    def combine_with(self, other):
+        from timepiece.sections import sections
+        one = RepeatSpec.using(start=self)
+        if type(other) is FilterSpec:
+            return RepeatAndFiltersSpec.using(repeat=one, filters=[other])
+        elif type(other) is sections.IntervalSpec:
+            return RepeatSpec.using(start=self, every=sections.IntervalsSpec.contain(other))
+        elif type(other) is sections.IntervalsSpec:
+            return RepeatSpec.using(start=self, every=other)
+        else:
+            super(DateTimeSpec, self).or_with(other)
+
+    def or_with(self, other):
+        from timepiece.sections import sections
+        repeat = RepeatSpec.using(start=self)
+        one = RepeatAndFiltersSpec.using(repeat=repeat)
+        if type(other) is RepeatSpec:
+            two = RepeatAndFiltersSpec.using(repeat=other)
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        elif type(other) is FilterSpec:
+            two = RepeatAndFiltersSpec.using(repeat=repeat, filters=[other])
+            return ManyRepeatAndFiltersSpec.using(specs=[one, other])
+        elif type(other) is sections.IntervalSpec:
+            two = RepeatAndFiltersSpec.using(
+                  repeat = RepeatSpec.using(start=repeat.start, every=sections.IntervalsSpec.contain(other))
+                )
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        elif type(other) is sections.IntervalsSpec:
+            two = RepeatAndFiltersSpec.using(
+                  repeat = RepeatSpec.using(start=self, every=other)
+                )
+            return ManyRepeatAndFiltersSpec.using(specs=[one, two])
+        else:
+            super(DateTimeSpec, self).or_with(other)
 

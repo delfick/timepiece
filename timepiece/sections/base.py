@@ -133,9 +133,22 @@ def section_repr(self):
     formatted = ['"{0}": {1}'.format(k, v) for k, v in kwargs]
     return "{0}({1})".format(self.__class__._section_name, "{{{0}}}".format(', '.join(formatted)))
 
-def fieldSpecs_from(*specs):
-    if len(specs) is 1:
-        return specs[0].FieldSpec()
-    else:
-        return sb.or_spec(*[fieldSpecs_from(spec) for spec in specs])
+class fieldSpecs_from(sb.Spec):
+    def setup(self, *specs):
+        self.specs = specs
+
+    @property
+    def spec(self):
+        if len(self.specs) is 1:
+            return self.specs[0].FieldSpec()
+        else:
+            return sb.or_spec(*[fieldSpecs_from(spec) for spec in self.specs])
+
+    def normalise_filled(self, meta, val):
+        if isinstance(val, BaseSpec):
+            if any(isinstance(val, k) for k in self.specs):
+                return val
+            else:
+                raise BadSpecValue("Expected a particular kind of object, got something different", available=[k.__name__ for k in self.specs], got=type(val), meta=meta)
+        return self.spec.normalise(meta, val)
 
