@@ -201,22 +201,6 @@ class ISO8601Spec(BaseSpec):
     duration = val
     interval = val
 
-    @property
-    def day(self):
-        if self.type == "time":
-            return datetime.utcnow().date()
-        elif self.type == "datetime":
-            return self.val.date()
-        else:
-            return self.val
-
-    @property
-    def time(self):
-        if self.type == "time":
-            return self.val
-        else:
-            return self.val.time()
-
     def simplify(self):
         if self.type == "repeating_interval":
             return ISO8601IntervalSpec.using(type=self.type, specification=self.specification)
@@ -238,6 +222,22 @@ class ISO8601DateOrTimeSpec(ISO8601Spec):
             return ("day", )
         else:
             return (self.type, )
+
+    @property
+    def day(self):
+        if self.type == "time":
+            return datetime.utcnow().date()
+        elif self.type == "datetime":
+            return self.val.date()
+        else:
+            return self.val
+
+    @property
+    def time(self):
+        if self.type == "time":
+            return self.val
+        else:
+            return self.val.time()
 
 class ISO8601DurationSpec(ISO8601Spec):
     type = dictobj.Field(sb.string_choice_spec(["duration"]), wrapper=sb.required)

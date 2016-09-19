@@ -20,10 +20,6 @@ def repeat_end_spec():
     from timepiece.sections import sections
     return sb.or_spec(none_spec(), fieldSpecs_from(sections.Forever, sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec))
 
-def intervals_intervals_spec():
-    from timepiece.sections import sections
-    return sb.listof(fieldSpecs_from(sections.IntervalSpec))
-
 class RepeatSpec(BaseSpec):
     __repr__ = section_repr
     @memoized_property
@@ -209,6 +205,10 @@ class DateTimeSpec(BaseSpec):
             return ManyRepeatAndFiltersSpec.using(specs=[one, two])
         else:
             super(DateTimeSpec, self).or_with(other)
+
+def intervals_intervals_spec():
+    from timepiece.sections import sections
+    return sb.listof(fieldSpecs_from(sections.IntervalSpec))
 
 class IntervalsSpec(BaseSpec):
     __repr__ = section_repr
