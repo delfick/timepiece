@@ -40,14 +40,14 @@ class RepeatSpec(BaseSpec):
         if at is None:
             at = datetime.utcnow()
 
-        if self.end and at > self.end:
+        if self.end and at > self.end.datetime:
             return
 
         if at < self.start.datetime:
             return self.start.following(at)
 
         if self.every:
-            return self.every.following(at, self.start.datetime, self.end)
+            return self.every.following(at, self.start.datetime, self.end.datetime if self.end is not None else None)
 
     def duration(self):
         return self.start.datetime(), self.end.datetime() if self.end is not None else self.end
