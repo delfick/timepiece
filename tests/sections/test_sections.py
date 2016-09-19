@@ -162,7 +162,7 @@ describe TestCase, "Sections":
             it "can represent repeating intervals":
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: repeating_interval, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601Spec)
+                self.assertIs(type(obj), sections.ISO8601IntervalSpec)
                 self.assertEqual(obj.specifies, ("interval", ))
 
                 res = mock.Mock(name="res")
@@ -177,7 +177,7 @@ describe TestCase, "Sections":
             it "can represent a datetime":
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: datetime, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601Spec)
+                self.assertIs(type(obj), sections.ISO8601DateOrTimeSpec)
                 self.assertEqual(obj.specifies, ("day", "time"))
 
                 day = mock.Mock(name="day")
@@ -200,7 +200,7 @@ describe TestCase, "Sections":
             it 'can represent a date':
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: date, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601Spec)
+                self.assertIs(type(obj), sections.ISO8601DateOrTimeSpec)
                 self.assertEqual(obj.specifies, ("day", ))
 
                 res = mock.Mock(name="res")
@@ -215,7 +215,7 @@ describe TestCase, "Sections":
             it 'can represent a time':
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: time, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601Spec)
+                self.assertIs(type(obj), sections.ISO8601DateOrTimeSpec)
                 self.assertEqual(obj.specifies, ("time", ))
 
                 res = mock.Mock(name="res")
@@ -226,6 +226,19 @@ describe TestCase, "Sections":
                     self.assertIs(obj.time, res)
 
                 fake_iso8601.parse_time.assert_called_once_with(spec)
+
+            it 'can represent a duration':
+                spec = str(uuid.uuid1())
+                obj = self.parser.time_spec_to_object("iso8601(type: duration, specification: {0})".format(spec), validate=False)
+                self.assertIs(type(obj), sections.ISO8601DurationSpec)
+                self.assertEqual(obj.specifies, ("duration", ))
+
+                res = mock.Mock(name="res")
+                fake_iso8601 = mock.Mock(name='iso8601')
+                fake_iso8601.parse_duration.return_value = res
+
+                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
+                    self.assertIs(obj.duration, res)
 
             it 'cannot represent arbitrary types':
                 spec = str(uuid.uuid1())
