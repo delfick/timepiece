@@ -169,6 +169,7 @@ class DateTimeSpec(BaseSpec):
     def following(self, at=None):
         if at is None:
             at = datetime.utcnow()
+        at = at.replace(microsecond=0)
         return None if at > self.datetime else self.datetime
 
     def combine_with(self, other):
