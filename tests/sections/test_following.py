@@ -175,3 +175,213 @@ describe TestCase, "following functionality":
             with mock.patch("timepiece.sections.final.datetime", fake_datetime):
                 self.assertIs(spec.following(at), None)
 
+    describe "IntervalsSpec":
+        it "keeps going till a round is empty":
+            at = datetime(2001, 1, 1)
+            start = datetime(1999, 1, 1)
+            end = datetime(2002, 1, 1)
+
+            called = []
+
+            def interval1_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                yield datetime(2000, 1, 2)
+                called.append([])
+                called[-1].append(1)
+
+                yield datetime(2000, 1, 4)
+                called.append([])
+                called[-1].append(1)
+
+            def interval2_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                yield datetime(2000, 1, 3)
+                called[-1].append(2)
+
+                yield datetime(2000, 1, 5)
+                called[-1].append(2)
+
+            interval1 = mock.Mock(name="interval1")
+            interval1.following.side_effect = interval1_gen
+
+            interval2 = mock.Mock(name="interval2")
+            interval2.following.side_effect = interval2_gen
+
+            spec = final.IntervalsSpec(intervals=[interval1, interval2])
+            self.assertEqual(spec.following(at, start, end), None)
+
+            self.assertEqual(called, [[1, 2], [1, 2]])
+
+        it "keeps going till we've reached over 100 rounds":
+            at = datetime(2001, 1, 1)
+            start = datetime(1999, 1, 1)
+            end = datetime(2002, 1, 1)
+
+            called = []
+
+            def interval1_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                while True:
+                    yield datetime(1998, 1, 2)
+                    called.append([])
+                    called[-1].append(1)
+
+            def interval2_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                while True:
+                    yield datetime(1998, 1, 3)
+                    called[-1].append(2)
+
+            interval1 = mock.Mock(name="interval1")
+            interval1.following.side_effect = interval1_gen
+
+            interval2 = mock.Mock(name="interval2")
+            interval2.following.side_effect = interval2_gen
+
+            spec = final.IntervalsSpec(intervals=[interval1, interval2])
+            self.assertEqual(spec.following(at, start, end), None)
+
+            self.assertEqual(len(called), 101)
+
+        it "drops repeaters that give values greater than end":
+            at = datetime(2001, 1, 1)
+            start = datetime(1999, 1, 1)
+            end = datetime(2002, 1, 1)
+
+            called = []
+
+            def interval1_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(1998, 1, 2)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(1998, 1, 3)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(2001, 1, 4)
+
+            def interval2_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                while True:
+                    called[-1].append(2)
+                    yield datetime(2003, 1, 3)
+
+            interval1 = mock.Mock(name="interval1")
+            interval1.following.side_effect = interval1_gen
+
+            interval2 = mock.Mock(name="interval2")
+            interval2.following.side_effect = interval2_gen
+
+            spec = final.IntervalsSpec(intervals=[interval1, interval2])
+            self.assertEqual(spec.following(at, start, end), datetime(2001, 1, 4))
+
+            self.assertEqual(called, [[1, 2], [1], [1]])
+
+        it "drops repeaters that finish":
+            at = datetime(2001, 1, 1)
+            start = datetime(1999, 1, 1)
+            end = datetime(2002, 1, 1)
+
+            called = []
+
+            def interval1_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(1998, 1, 2)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(1998, 1, 3)
+
+                called.append([])
+                called[-1].append(1)
+                yield datetime(2001, 1, 4)
+
+            def interval2_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                called[-1].append(2)
+                if False:
+                    yield None
+
+            interval1 = mock.Mock(name="interval1")
+            interval1.following.side_effect = interval1_gen
+
+            interval2 = mock.Mock(name="interval2")
+            interval2.following.side_effect = interval2_gen
+
+            spec = final.IntervalsSpec(intervals=[interval1, interval2])
+            self.assertEqual(spec.following(at, start, end), datetime(2001, 1, 4))
+
+            self.assertEqual(called, [[1, 2], [1], [1]])
+
+        it "chooses the minimum after at and after start":
+            at = datetime(2001, 1, 1)
+            start = datetime(1999, 1, 1)
+            end = datetime(2002, 1, 1)
+
+            def interval1_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                # Both before start
+                yield datetime(1998, 1, 3)
+
+                # Both before at but after start
+                yield datetime(2000, 1, 3)
+
+                # this after start, but before at
+                yield datetime(2000, 12, 3)
+
+            def interval2_gen(a, s, e):
+                self.assertIs(a, at)
+                self.assertIs(s, start)
+                self.assertIs(e, end)
+
+                # Both before start
+                yield datetime(1998, 1, 4)
+
+                # Both before at but after start
+                yield datetime(2000, 1, 4)
+
+                # this after at
+                yield datetime(2001, 1, 4)
+
+            interval1 = mock.Mock(name="interval1")
+            interval1.following.side_effect = interval1_gen
+
+            interval2 = mock.Mock(name="interval2")
+            interval2.following.side_effect = interval2_gen
+
+            spec = final.IntervalsSpec(intervals=[interval1, interval2])
+            self.assertEqual(spec.following(at, start, end), datetime(2001, 1, 4))
+

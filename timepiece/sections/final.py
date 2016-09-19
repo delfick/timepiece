@@ -231,21 +231,65 @@ class IntervalsSpec(BaseSpec):
 
     def following(self, at, start, end):
         repeaters = []
-        for interval in self.intervals:
-            repeaters.append(interval.following(at, start, end))
 
+        # Make a list of generators from our intervals
+        for interval in self.intervals:
+            repeaters.append(iter(interval.following(at, start, end)))
+
+        # Keep generating a "round" of the next result from each repeater
+        # Until:
+        #
+        #  * we have no valid values in a round
+        #  * we have a value greater than `at`
+        #  * we have attempted this over 100 times
+        #
         round_count = -1
         while True:
             round_count += 1
-            next_round_prep = [next(r) for r in repeaters]
-            next_round = [n for n in next_round_prep if n]
-            if not next_round:
+            next_round = []
+
+            # Fill out the next_round with valid values
+            #
+            # Where valid is:
+            # * not None
+            # * greater than start
+            # * less or equal to end (minus microseconds)
+
+            new_repeaters = []
+            for repeater in repeaters:
+                try:
+                    nxt = next(repeater)
+                except StopIteration:
+                    pass
+                else:
+                    if nxt and nxt.replace(microsecond=0) <= end:
+                        if nxt >= start and nxt >= at:
+                            next_round.append(nxt)
+                        new_repeaters.append(repeater)
+
+            # Replace our repeaters with the ones that had valid values
+            repeaters = new_repeaters
+
+            # Quit if no more repeaters
+            if not repeaters:
                 break
 
+            # No values this round, try again
+            # i.e. all values were before the start date
+            if not next_round:
+                if round_count > 100:
+                    break
+                else:
+                    continue
+
+            # Find soonest following time
             mn = min(next_round)
+
+            # Return the min if it's greater than our starting point
             if mn > at:
                 return mn
 
+            # Let's not spin forever and ever
             if round_count > 100:
                 return mn
 
