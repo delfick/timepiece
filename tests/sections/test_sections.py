@@ -112,13 +112,13 @@ describe TestCase, "Sections":
             it "combines with intervals":
                 obj = self.parser.time_spec_to_object("between(start: sunset()) & interval(every: amount(num: 1, size: minute))")
                 self.assertEqual(type(obj), final.RepeatSpec)
-                self.assertEqual(type(obj.every), sections.IntervalsSpec)
+                self.assertEqual(type(obj.every), final.IntervalsSpec)
                 self.assertEqual(len(obj.every.intervals), 1)
 
             it "combines with multiple intervals":
                 obj = self.parser.time_spec_to_object("between(start: sunset()) & (interval(every: amount(num: 1, size: minute)) | interval(every: amount(num:2, size: hour)))")
                 self.assertEqual(type(obj), final.RepeatSpec)
-                self.assertEqual(type(obj.every), sections.IntervalsSpec)
+                self.assertEqual(type(obj.every), final.IntervalsSpec)
                 self.assertEqual(len(obj.every.intervals), 2)
 
         describe "day_name":

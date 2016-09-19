@@ -70,50 +70,13 @@ class IntervalSpec(BaseSpec):
 
     def or_with(self, other):
         if isinstance(other, IntervalSpec):
-            return IntervalsSpec.contain(self, other)
-        elif isinstance(other, IntervalsSpec):
-            return IntervalsSpec.contain(self, *other.intervals)
+            return final.IntervalsSpec.contain(self, other)
+        elif isinstance(other, final.IntervalsSpec):
+            return final.IntervalsSpec.contain(self, *other.intervals)
         return super(IntervalSpec, self).or_with(other)
 
     def following(self, at, start, end):
         yield from self.every.interval(start, at, end)
-
-class IntervalsSpec(BaseSpec):
-    __repr__ = section_repr
-    _section_name = "Intervals"
-    specifies = ("interval", )
-    intervals = dictobj.Field(lambda: sb.listof(fieldSpecs_from(IntervalSpec)))
-
-    @classmethod
-    def contain(kls, *intervals):
-        return kls.FieldSpec().normalise(EmptyMeta, {"intervals": list(intervals)})
-
-    def or_with(self, other):
-        if isinstance(other, IntervalsSpec):
-            return IntervalsSpec.contain(*self.intervals, *other.intervals)
-        elif isinstance(other, IntervalSpec):
-            return IntervalsSpec.contain(*self.intervals, other)
-        return super(IntervalSpec, self).or_with(other)
-
-    def following(self, at, start, end):
-        repeaters = []
-        for interval in self.intervals:
-            repeaters.append(interval.following(at, start, end))
-
-        round_count = -1
-        while True:
-            round_count += 1
-            next_round_prep = [next(r) for r in repeaters]
-            next_round = [n for n in next_round_prep if n]
-            if not next_round:
-                break
-
-            mn = min(next_round)
-            if mn > at:
-                return mn
-
-            if round_count > 100:
-                return mn
 
 @a_section("range")
 class RangeSpec(BaseSpec):

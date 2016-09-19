@@ -10,16 +10,19 @@ from datetime import datetime
 EmptyMeta = Meta.empty()
 
 def repeat_every_spec():
-    from timepiece.sections import sections
-    return lambda: fieldSpecs_from(sections.IntervalsSpec)
+    return fieldSpecs_from(IntervalsSpec)
 
 def repeat_start_spec():
     from timepiece.sections import sections
-    return lambda: fieldSpecs_from(sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec)
+    return fieldSpecs_from(sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec)
 
 def repeat_end_spec():
     from timepiece.sections import sections
-    return lambda: sb.or_spec(none_spec(), fieldSpecs_from(sections.Forever, sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec))
+    return sb.or_spec(none_spec(), fieldSpecs_from(sections.Forever, sections.EpochSpec, DateTimeSpec, sections.SunRiseSpec, sections.SunSetSpec))
+
+def intervals_intervals_spec():
+    from timepiece.sections import sections
+    return sb.listof(fieldSpecs_from(sections.IntervalSpec))
 
 class RepeatSpec(BaseSpec):
     __repr__ = section_repr
@@ -33,9 +36,9 @@ class RepeatSpec(BaseSpec):
         if not spec:
             spec = ("once", )
         return spec
-    every = dictobj.Field(repeat_every_spec(), default=None)
-    start = dictobj.Field(repeat_start_spec(), wrapper=sb.required)
-    end = dictobj.Field(repeat_end_spec(), default=None)
+    every = dictobj.Field(repeat_every_spec, default=None)
+    start = dictobj.Field(repeat_start_spec, wrapper=sb.required)
+    end = dictobj.Field(repeat_end_spec, default=None)
 
     def following(self, at=None):
         if at is None:
@@ -58,8 +61,8 @@ class RepeatSpec(BaseSpec):
         if type(other) is FilterSpec:
             return RepeatAndFiltersSpec.using(repeat=self, filters=[other])
         elif type(other) is sections.IntervalSpec:
-            return RepeatSpec.using(start=self.start, end=self.end, every=sections.IntervalsSpec.contain(other))
-        elif type(other) is sections.IntervalsSpec:
+            return RepeatSpec.using(start=self.start, end=self.end, every=IntervalsSpec.contain(other))
+        elif type(other) is IntervalsSpec:
             return RepeatSpec.using(start=self.start, end=self.end, every=other)
         else:
             super(RepeatSpec, self).or_with(other)
@@ -75,10 +78,10 @@ class RepeatSpec(BaseSpec):
             return ManyRepeatAndFiltersSpec.using(specs=[one, other])
         elif type(other) is sections.IntervalSpec:
             two = RepeatAndFiltersSpec.using(
-                  repeat = RepeatSpec.using(start=self.start, end=self.end, every=sections.IntervalsSpec.contain(other))
+                  repeat = RepeatSpec.using(start=self.start, end=self.end, every=IntervalsSpec.contain(other))
                 )
             return ManyRepeatAndFiltersSpec.using(specs=[one, two])
-        elif type(other) is sections.IntervalsSpec:
+        elif type(other) is IntervalsSpec:
             two = RepeatAndFiltersSpec.using(
                   repeat = RepeatSpec.using(start=self.start, end=self.end, every=other)
                 )
@@ -178,8 +181,8 @@ class DateTimeSpec(BaseSpec):
         if type(other) is FilterSpec:
             return RepeatAndFiltersSpec.using(repeat=one, filters=[other])
         elif type(other) is sections.IntervalSpec:
-            return RepeatSpec.using(start=self, every=sections.IntervalsSpec.contain(other))
-        elif type(other) is sections.IntervalsSpec:
+            return RepeatSpec.using(start=self, every=IntervalsSpec.contain(other))
+        elif type(other) is IntervalsSpec:
             return RepeatSpec.using(start=self, every=other)
         else:
             super(DateTimeSpec, self).or_with(other)
@@ -196,14 +199,52 @@ class DateTimeSpec(BaseSpec):
             return ManyRepeatAndFiltersSpec.using(specs=[one, other])
         elif type(other) is sections.IntervalSpec:
             two = RepeatAndFiltersSpec.using(
-                  repeat = RepeatSpec.using(start=repeat.start, every=sections.IntervalsSpec.contain(other))
+                  repeat = RepeatSpec.using(start=repeat.start, every=IntervalsSpec.contain(other))
                 )
             return ManyRepeatAndFiltersSpec.using(specs=[one, two])
-        elif type(other) is sections.IntervalsSpec:
+        elif type(other) is IntervalsSpec:
             two = RepeatAndFiltersSpec.using(
                   repeat = RepeatSpec.using(start=self, every=other)
                 )
             return ManyRepeatAndFiltersSpec.using(specs=[one, two])
         else:
             super(DateTimeSpec, self).or_with(other)
+
+class IntervalsSpec(BaseSpec):
+    __repr__ = section_repr
+    _section_name = "Intervals"
+    specifies = ("interval", )
+    intervals = dictobj.Field(intervals_intervals_spec)
+
+    @classmethod
+    def contain(kls, *intervals):
+        return kls.FieldSpec().normalise(EmptyMeta, {"intervals": list(intervals)})
+
+    def or_with(self, other):
+        from timepiece.sections import sections
+        if isinstance(other, IntervalsSpec):
+            return IntervalsSpec.contain(*self.intervals, *other.intervals)
+        elif isinstance(other, sections.IntervalSpec):
+            return IntervalsSpec.contain(*self.intervals, other)
+        return super(IntervalsSpec, self).or_with(other)
+
+    def following(self, at, start, end):
+        repeaters = []
+        for interval in self.intervals:
+            repeaters.append(interval.following(at, start, end))
+
+        round_count = -1
+        while True:
+            round_count += 1
+            next_round_prep = [next(r) for r in repeaters]
+            next_round = [n for n in next_round_prep if n]
+            if not next_round:
+                break
+
+            mn = min(next_round)
+            if mn > at:
+                return mn
+
+            if round_count > 100:
+                return mn
 
