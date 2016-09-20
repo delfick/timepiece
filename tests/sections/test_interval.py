@@ -40,10 +40,21 @@ describe TestCase, "interval functionality":
             amount = sections.AmountSpec(num=1, size=Sizes.SECOND.value)
             start_time = time.time()
             intervals = amount.interval(start, at, end)
-            self.assertLess(time.time() - start_time, 0.0001)
+            self.assertLess(time.time() - start_time, 0.001)
 
             start_time = time.time()
             nxt = next(intervals)
-            self.assertLess(time.time() - start_time, 0.0001)
+            self.assertLess(time.time() - start_time, 0.001)
 
             self.assertEqual(nxt, datetime(2000, 12, 2, 1, 1, 2))
+
+    describe "ISO8601DurationSpec":
+        it "gets the interval from the specification":
+            spec = sections.ISO8601DurationSpec(type="duration", specification="P1D").simplify()
+            start = datetime(2000, 1, 1, 1, 1, 1)
+            end = datetime(2001, 1, 1, 1, 1, 1)
+            at = datetime(2000, 6, 1, 1, 1, 1)
+
+            intervals = spec.interval(start, at, end)
+            self.assertEqual(next(intervals), datetime(2000, 6, 2, 1, 1, 1))
+            self.assertEqual(next(intervals), datetime(2000, 6, 3, 1, 1, 1))
