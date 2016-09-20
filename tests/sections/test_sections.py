@@ -4,7 +4,6 @@ from tests.helpers import TestCase
 
 from timepiece.sections import sections, final
 from timepiece.spec import make_timepiece
-from timepiece.sizing import Sizes
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from input_algorithms.errors import BadSpecValue
