@@ -42,25 +42,32 @@ class AmountSpec(BaseSpec):
     def interval(self, start, at, end):
         num = self.num
         size = self.size
-        if at > start:
-            difference = (at - start).seconds
+        nxt = start
+        if at > nxt:
+            difference = (at - nxt).total_seconds()
             if size == Sizes.SECOND.value:
-                start += timedelta(seconds=int(difference/num) * num)
+                nxt += timedelta(seconds=int(difference/num) * num)
 
             elif size == Sizes.MINUTE.value:
-                start += timedelta(minutes=int(difference/60/num) * num)
+                nxt += timedelta(minutes=int(difference/60/num) * num)
 
             elif size == Sizes.HOUR.value:
-                start += timedelta(hours=int(difference/3600/num) * num)
+                nxt += timedelta(hours=int(difference/3600/num) * num)
 
             elif size == Sizes.DAY.value:
-                start += timedelta(days=int(difference/3600*24/num) * num)
+                nxt += timedelta(days=int(difference/3600*24/num) * num)
 
-        while start < at:
-            start += relativedelta(**{"{0}s".format(size): num})
+        delta = relativedelta(**{"{0}s".format(size): num})
+        while nxt <= at:
+            nxt += delta
 
-        if start > start and start < end and start > at:
-            return start
+        while True:
+            if nxt > start and nxt.replace(microsecond=0) <= end:
+                yield nxt
+            else:
+                break
+
+            nxt += delta
 
 @a_section("interval")
 class IntervalSpec(BaseSpec):
