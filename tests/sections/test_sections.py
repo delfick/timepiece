@@ -159,12 +159,6 @@ describe TestCase, "Sections":
                 self.assertIs(type(obj), sections.SunSetSpec)
 
         describe "iso8601":
-            it "can represent repeating intervals":
-                spec = str(uuid.uuid1())
-                obj = self.parser.time_spec_to_object("iso8601(type: repeating_interval, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601IntervalSpec)
-                self.assertEqual(obj.specifies, ("interval", ))
-
             it "can represent a datetime":
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: datetime, specification: {0})".format(spec), validate=False)
@@ -237,7 +231,7 @@ describe TestCase, "Sections":
 
             it 'cannot represent arbitrary types':
                 spec = str(uuid.uuid1())
-                error = BadSpecValue("Expected one of the available choices", got="arbitrary", available=['datetime', 'date', 'time', 'duration', 'repeating_interval'], meta=mock.ANY)
+                error = BadSpecValue("Expected one of the available choices", got="arbitrary", available=['datetime', 'date', 'time', 'duration'], meta=mock.ANY)
                 with self.fuzzyAssertRaisesError(BadSpecValue, _errors=[error]):
                      self.parser.time_spec_to_object("iso8601(type: arbitrary, specification: {0})".format(spec), validate=False)
 

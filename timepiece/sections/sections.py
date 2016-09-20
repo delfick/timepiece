@@ -81,7 +81,7 @@ class AmountSpec(BaseSpec):
 class IntervalSpec(BaseSpec):
     __repr__ = section_repr
     specifies = ("interval", )
-    every = dictobj.Field(lambda: fieldSpecs_from(ISO8601IntervalSpec, AmountSpec), wrapper=sb.required)
+    every = dictobj.Field(lambda: fieldSpecs_from(AmountSpec), wrapper=sb.required)
 
     def or_with(self, other):
         if isinstance(other, IntervalSpec):
@@ -206,7 +206,7 @@ class SunSetSpec(BaseSpec):
 @a_section("iso8601")
 class ISO8601Spec(BaseSpec):
     __repr__ = section_repr
-    type = dictobj.Field(sb.string_choice_spec(["datetime", "date", "time", "duration", "repeating_interval"]), wrapper=sb.required)
+    type = dictobj.Field(sb.string_choice_spec(["datetime", "date", "time", "duration"]), wrapper=sb.required)
     specification = dictobj.Field(sb.string_spec(), wrapper=sb.required)
 
     @memoized_property
@@ -221,9 +221,7 @@ class ISO8601Spec(BaseSpec):
     duration = val
 
     def simplify(self):
-        if self.type == "repeating_interval":
-            return ISO8601IntervalSpec.using(type=self.type, specification=self.specification)
-        elif self.type == "duration":
+        if self.type == "duration":
             return ISO8601DurationSpec.using(type=self.type, specification=self.specification)
         else:
             return ISO8601DateOrTimeSpec.using(type=self.type, specification=self.specification)
@@ -265,16 +263,3 @@ class ISO8601DurationSpec(ISO8601Spec):
 
     def simplify(self):
         return AmountSpec(num=1, size=self.relative_val)
-
-class ISO8601IntervalSpec(ISO8601Spec):
-    type = dictobj.Field(sb.string_choice_spec(["repeating_interval"]), wrapper=sb.required)
-    specification = dictobj.Field(sb.string_spec(), wrapper=sb.required)
-    _section_name = "iso8601"
-    specifies = ("interval", )
-    def simplify(self): return self
-
-    def interval(self, start, at, end):
-        for dt in self.val:
-            if dt > at and dt >= start and dt.replace(microsecond=0) < end:
-                yield dt
-
