@@ -385,3 +385,24 @@ describe TestCase, "following functionality":
             spec = final.IntervalsSpec(intervals=[interval1, interval2])
             self.assertEqual(spec.following(at, start, end), datetime(2001, 1, 4))
 
+    describe "IntervalSpec":
+        it "yields from the every attribute":
+            res1 = mock.Mock(name='res1')
+            res2 = mock.Mock(name='res2')
+            res3 = mock.Mock(name='res3')
+
+            def gen(s, a, e):
+                yield res1
+                yield res2
+                yield res3
+            every = mock.Mock(name="every")
+            every.interval.side_effect = gen
+
+            spec = sections.IntervalSpec(every=every)
+            s = mock.Mock(name='s')
+            a = mock.Mock(name='a')
+            e = mock.Mock(name="e")
+            self.assertEqual(list(spec.following(s, a, e)), [res1, res2, res3])
+
+            every.interval.assert_called_once_with(a, s, e)
+
