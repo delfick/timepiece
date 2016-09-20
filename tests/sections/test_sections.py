@@ -147,7 +147,7 @@ describe TestCase, "Sections":
             it "can combine with a date":
                 res = self.parser.time_spec_to_object("time(hour: 16, minute:20) & date(month:3, day:10, year:1980)")
                 self.assertEqual(type(res), final.DateTimeSpec)
-                self.assertEqual(res.datetime.strftime("%s"), "321517200")
+                self.assertEqual(res.datetime.strftime("%Y %m %d : %H %M"), "1980 03 10 : 16 20")
 
         describe "sunrise":
             it "does not simplify":
