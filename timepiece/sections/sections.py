@@ -93,6 +93,10 @@ class IntervalSpec(BaseSpec):
     def following(self, at, start, end):
         yield from self.every.interval(start, at, end)
 
+    def is_filtered(self, at):
+        """Assume that we got this at from the following method"""
+        return True
+
 @a_section("range")
 class RangeSpec(BaseSpec):
     __repr__ = section_repr

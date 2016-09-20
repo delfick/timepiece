@@ -38,6 +38,15 @@ class RepeatSpec(BaseSpec):
     start = dictobj.Field(repeat_start_spec, wrapper=sb.required)
     end = dictobj.Field(repeat_end_spec, default=None)
 
+    def is_filtered(self, at):
+        if self.end and at > self.end.datetime:
+            return False
+
+        if at < self.start.datetime:
+            return False
+
+        return self.every.is_filtered(at)
+
     def following(self, at=None):
         if at is None:
             at = datetime.utcnow()
@@ -202,6 +211,18 @@ class DateTimeSpec(BaseSpec):
         at = at.replace(microsecond=0)
         return None if at > self.datetime else self.datetime
 
+    def is_filtered(self, at):
+        if at < self.datetime:
+            return False
+
+        if at == self.datetime:
+            return True
+
+        if self.datetime - at < timedelta(seconds=5):
+            return True
+
+        return False
+
     def combine_with(self, other):
         from timepiece.sections import sections
         one = RepeatSpec.using(start=self)
@@ -258,6 +279,10 @@ class IntervalsSpec(BaseSpec):
         elif isinstance(other, sections.IntervalSpec):
             return IntervalsSpec.contain(*self.intervals, other)
         return super(IntervalsSpec, self).or_with(other)
+
+    def is_filtered(self, at):
+        """Assume that this has been triggered because of using the following method, so don't reprocess"""
+        return True
 
     def following(self, at, start, end):
         repeaters = []
