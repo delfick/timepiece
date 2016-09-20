@@ -5,9 +5,11 @@ from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
 from input_algorithms.meta import Meta
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 EmptyMeta = Meta.empty()
+
+weekday_names = ["mon", "tues", "wed", "thur", "fri", "sat", "sun"]
 
 def repeat_every_spec():
     return fieldSpecs_from(IntervalsSpec)
@@ -85,16 +87,27 @@ class RepeatSpec(BaseSpec):
         else:
             super(RepeatSpec, self).or_with(other)
 
+def gregorian_week(dt):
+    """Thanks http://stackoverflow.com/a/32638267"""
+    # The isocalendar week for this date
+    iso_week = dt.isocalendar()[1]
+
+    # The baseline Gregorian date for the beginning of our date's year
+    base_greg = datetime.strptime('{0}-1-1'.format(dt.year), "%Y-%W-%w")
+
+    # If the isocalendar week for this date is not 1, we need to
+    # decrement the iso_week by 1 to get the Gregorian week number
+    return iso_week if base_greg.isocalendar()[1] == 1 else iso_week - 1
+
 class FilterSpec(BaseSpec):
     def __repr__(self):
         return "[{1}]".format(section_repr(self))
     specifies = ("filter", )
     minutes = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     hours = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
-    days = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     weeks = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
     months = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
-    day_names = dictobj.Field(lambda: ssv_spec(["mon", "tues", "wed", "thur", "fri", "sat", "sun"]))
+    day_names = dictobj.Field(lambda: ssv_spec(weekday_names))
     day_numbers = dictobj.Field(lambda: ssv_spec(spec=sb.integer_spec()))
 
     def combine_with(self, other):
@@ -114,7 +127,24 @@ class FilterSpec(BaseSpec):
             super(FilterSpec, self).combine_with(self, other)
 
     def is_filtered(self, at):
-        raise NotImplementedError("Getting there...")
+        filtered = True
+        tup = at.timetuple()
+        specified = lambda val: val not in (sb.NotSpecified, None)
+
+        if specified(self.minutes) and tup.tm_min not in self.minutes:
+            filtered = False
+        if specified(self.hours) and tup.tm_hour not in self.hours:
+            filtered = False
+        if specified(self.weeks) and gregorian_week(at) not in self.weeks:
+            filtered = False
+        if specified(self.months) and tup.tm_mon not in self.months:
+            filtered = False
+        if specified(self.day_names) and weekday_names[tup.tm_wday] not in self.day_names:
+            filtered = False
+        if specified(self.day_numbers) and tup.tm_yday not in self.day_numbers:
+            filtered = False
+
+        return filtered
 
 class RepeatAndFiltersSpec(BaseSpec):
     def __repr__(self):
