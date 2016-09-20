@@ -3,6 +3,7 @@ from timepiece.sizing import valid_sizes, convert_amount, common_size, Sizes
 from timepiece.helpers import memoized_property
 from timepiece.sections import final
 
+from input_algorithms.errors import BadSpecValue
 from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
 from input_algorithms.meta import Meta
@@ -43,21 +44,28 @@ class AmountSpec(BaseSpec):
         num = self.num
         size = self.size
         nxt = start
-        if at > nxt:
-            difference = (at - nxt).total_seconds()
-            if size == Sizes.SECOND.value:
-                nxt += timedelta(seconds=int(difference/num) * num)
+        if type(size) is relativedelta:
+            if num != 1:
+                raise BadSpecValue("Num was not 1 when AmountSpec specified with a relativedelta size", num=num)
+            delta = size
 
-            elif size == Sizes.MINUTE.value:
-                nxt += timedelta(minutes=int(difference/60/num) * num)
+        else:
+            if at > nxt:
+                difference = (at - nxt).total_seconds()
+                if size == Sizes.SECOND.value:
+                    nxt += timedelta(seconds=int(difference/num) * num)
 
-            elif size == Sizes.HOUR.value:
-                nxt += timedelta(hours=int(difference/3600/num) * num)
+                elif size == Sizes.MINUTE.value:
+                    nxt += timedelta(minutes=int(difference/60/num) * num)
 
-            elif size == Sizes.DAY.value:
-                nxt += timedelta(days=int(difference/3600*24/num) * num)
+                elif size == Sizes.HOUR.value:
+                    nxt += timedelta(hours=int(difference/3600/num) * num)
 
-        delta = relativedelta(**{"{0}s".format(size): num})
+                elif size == Sizes.DAY.value:
+                    nxt += timedelta(days=int(difference/3600*24/num) * num)
+
+            delta = relativedelta(**{"{0}s".format(size): num})
+
         while nxt <= at:
             nxt += delta
 
@@ -73,7 +81,7 @@ class AmountSpec(BaseSpec):
 class IntervalSpec(BaseSpec):
     __repr__ = section_repr
     specifies = ("interval", )
-    every = dictobj.Field(lambda: fieldSpecs_from(ISO8601IntervalSpec, ISO8601DurationSpec, AmountSpec), wrapper=sb.required)
+    every = dictobj.Field(lambda: fieldSpecs_from(ISO8601IntervalSpec, AmountSpec), wrapper=sb.required)
 
     def or_with(self, other):
         if isinstance(other, IntervalSpec):
@@ -204,9 +212,13 @@ class ISO8601Spec(BaseSpec):
     @memoized_property
     def val(self):
         return getattr(aniso8601, "parse_{0}".format(self.type))(self.specification)
+
+    @memoized_property
+    def relative_val(self):
+        return getattr(aniso8601, "parse_{0}".format(self.type))(self.specification, relative=True)
+
     datetime = val
     duration = val
-    interval = val
 
     def simplify(self):
         if self.type == "repeating_interval":
@@ -250,8 +262,9 @@ class ISO8601DurationSpec(ISO8601Spec):
     type = dictobj.Field(sb.string_choice_spec(["duration"]), wrapper=sb.required)
     specification = dictobj.Field(sb.string_spec(), wrapper=sb.required)
     _section_name = "iso8601"
-    specifies = ("duration", )
-    def simplify(self): return self
+
+    def simplify(self):
+        return AmountSpec(num=1, size=self.relative_val)
 
 class ISO8601IntervalSpec(ISO8601Spec):
     type = dictobj.Field(sb.string_choice_spec(["repeating_interval"]), wrapper=sb.required)
@@ -259,4 +272,9 @@ class ISO8601IntervalSpec(ISO8601Spec):
     _section_name = "iso8601"
     specifies = ("interval", )
     def simplify(self): return self
+
+    def interval(self, start, at, end):
+        for dt in self.val:
+            if dt > at and dt >= start and dt.replace(microsecond=0) < end:
+                yield dt
 

@@ -4,6 +4,7 @@ from tests.helpers import TestCase
 
 from timepiece.sections import sections, final
 from timepiece.spec import make_timepiece
+from timepiece.sizing import Sizes
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from input_algorithms.errors import BadSpecValue
@@ -165,15 +166,6 @@ describe TestCase, "Sections":
                 self.assertIs(type(obj), sections.ISO8601IntervalSpec)
                 self.assertEqual(obj.specifies, ("interval", ))
 
-                res = mock.Mock(name="res")
-                fake_iso8601 = mock.Mock(name='iso8601')
-                fake_iso8601.parse_repeating_interval.return_value = res
-
-                with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
-                    self.assertIs(obj.interval, res)
-
-                fake_iso8601.parse_repeating_interval.assert_called_once_with(spec)
-
             it "can represent a datetime":
                 spec = str(uuid.uuid1())
                 obj = self.parser.time_spec_to_object("iso8601(type: datetime, specification: {0})".format(spec), validate=False)
@@ -228,17 +220,21 @@ describe TestCase, "Sections":
                 fake_iso8601.parse_time.assert_called_once_with(spec)
 
             it 'can represent a duration':
-                spec = str(uuid.uuid1())
-                obj = self.parser.time_spec_to_object("iso8601(type: duration, specification: {0})".format(spec), validate=False)
-                self.assertIs(type(obj), sections.ISO8601DurationSpec)
-                self.assertEqual(obj.specifies, ("duration", ))
+                res = mock.Mock(name='res')
+                res.total_seconds.return_value = 22
 
-                res = mock.Mock(name="res")
+                spec = str(uuid.uuid1())
                 fake_iso8601 = mock.Mock(name='iso8601')
                 fake_iso8601.parse_duration.return_value = res
 
                 with mock.patch("timepiece.sections.sections.aniso8601", fake_iso8601):
-                    self.assertIs(obj.duration, res)
+                    obj = self.parser.time_spec_to_object("iso8601(type: duration, specification: {0})".format(spec), validate=False)
+
+                self.assertIs(type(obj), sections.AmountSpec)
+                self.assertEqual(obj.num, 1)
+                self.assertEqual(obj.size, res)
+
+                fake_iso8601.parse_duration.assert_called_once_with(spec, relative=True)
 
             it 'cannot represent arbitrary types':
                 spec = str(uuid.uuid1())

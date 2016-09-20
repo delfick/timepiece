@@ -40,7 +40,7 @@ describe TestCase, "interval functionality":
             amount = sections.AmountSpec(num=1, size=Sizes.SECOND.value)
             start_time = time.time()
             intervals = amount.interval(start, at, end)
-            self.assertLess(time.time() - start_time, 0.00001)
+            self.assertLess(time.time() - start_time, 0.0001)
 
             start_time = time.time()
             nxt = next(intervals)
