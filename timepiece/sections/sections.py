@@ -18,12 +18,12 @@ EmptyMeta = Meta.empty()
 
 class Forever(BaseSpec):
     __repr__ = section_repr
+    def simplify(self):
+        return final.DateTimeSpec.contain(datetime.utcnow() + timedelta(hours=24 * 365))
 
 @a_section("now")
 class NowSpec(BaseSpec):
     __repr__ = section_repr
-    specifies = ("day", "time")
-
     def simplify(self):
         return final.DateTimeSpec.contain(datetime.utcnow())
 
@@ -115,7 +115,7 @@ class BetweenSpec(BaseSpec):
     end = dictobj.Field(lambda: fieldSpecs_from(NowSpec, EpochSpec, final.DateTimeSpec, DayNameSpec, DayNumberSpec, TimeSpec, SunRiseSpec, SunSetSpec, ISO8601DateOrTimeSpec), default=None)
 
     def simplify(self):
-        return final.RepeatSpec.using(start=self.start, end=self.end if self.end is not None else Forever.using())
+        return final.RepeatSpec.using(start=self.start, end=self.end if self.end is not None else Forever.using().simplify())
 
 @a_section("day_name")
 class DayNameSpec(BaseSpec):

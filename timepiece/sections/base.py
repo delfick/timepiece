@@ -82,10 +82,7 @@ class SectionSpec(sb.Spec):
     ErrorKls = DelfickError
 
     def setup(self, available_sections=None):
-        if available_sections is None:
-            self.available_sections = default_available_sections
-        else:
-            self.available_sections = available_sections
+        self.available_sections = available_sections
 
     def normalise_filled(self, meta, val):
         if isinstance(val, dictobj):

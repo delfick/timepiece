@@ -218,7 +218,7 @@ class DateTimeSpec(BaseSpec):
         if at == self.datetime:
             return True
 
-        if self.datetime - at < timedelta(seconds=5):
+        if at - self.datetime < timedelta(seconds=30):
             return True
 
         return False

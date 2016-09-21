@@ -1,3 +1,4 @@
+from timepiece.sections.base import default_available_sections
 from timepiece.helpers import memoized_property
 
 from input_algorithms.errors import BadSpecValue
@@ -22,6 +23,11 @@ class TimeSpecGrammar(object):
 
     def time_spec_to_object(self, time_spec, validate=True):
         return self.visitor.parse(time_spec.replace(" ", "").replace("\t", ""), validate=validate)
+
+    def clone(self, more_sections):
+        instance = self.__class__(self.available_sections)
+        instance._visitor = self.visitor.clone(more_sections)
+        return instance
 
 class TimeSpecVisitor(NodeVisitor):
     ErrorKls = DelfickError
@@ -63,12 +69,23 @@ class TimeSpecVisitor(NodeVisitor):
         self.joiner_count = -1
         self.meta = EmptyMeta
         self.time_spec = None
+
         self.available_sections = available_sections
+        if self.available_sections is None:
+            self.available_sections = default_available_sections
 
         self.visiting_methods = {}
         for attr in dir(self):
             if attr.startswith("visit_"):
                 self.visiting_methods[attr[6:]] = getattr(self, attr)
+
+    def clone(self, more_sections=None):
+        sections = {}
+        sections.update(dict(self.available_sections or {}))
+        sections.update(dict(more_sections or {}))
+        instance = self.__class__(sections)
+        instance._grammar = getattr(self, "_grammar", None)
+        return instance
 
     def parse(self, text, validate=True):
         try:
