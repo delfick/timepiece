@@ -158,7 +158,7 @@ class TimeSpec(BaseSpec):
             dt = datetime.combine(date, self.time)
             return final.DateTimeSpec.contain(dt)
         else:
-            super(TimeSpec, self).or_with(other)
+            super(TimeSpec, self).combine_with(other)
 
 @a_section("epoch")
 class EpochSpec(BaseSpec):
@@ -195,7 +195,7 @@ class Date(BaseSpec):
             dt = datetime_module.combine(self.date, time)
             return final.DateTimeSpec.contain(dt)
         else:
-            super(TimeSpec, self).or_with(other)
+            super(Date, self).combine_with(other)
 
 @a_section("sunrise")
 class SunRiseSpec(BaseSpec):
