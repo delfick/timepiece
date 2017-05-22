@@ -11,7 +11,7 @@ setup(
        [ 'delfick_error>=1.6'
        , "input_algorithms>=0.5.1"
 
-       , "dateparser==0.4.0"
+       , "dateparser==0.6.0"
        , "dateutils==0.6.6"
        , "parsimonious==0.7.0"
        , "aniso8601==1.1.0"
