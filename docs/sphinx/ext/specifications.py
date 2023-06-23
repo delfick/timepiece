@@ -3,7 +3,7 @@ from input_algorithms.validators import default_validators
 from input_algorithms.spec_base import default_specs
 
 from docutils.statemachine import ViewList
-from sphinx.util.compat import Directive
+from docutils.parsers.rst import Directive
 from textwrap import dedent
 from docutils import nodes
 import six
